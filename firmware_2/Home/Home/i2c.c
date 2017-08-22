@@ -66,8 +66,8 @@ void i2cInit(void)
 	// clear SlaveReceive and SlaveTransmit handler to null
 	i2cSlaveReceive = 0;
 	i2cSlaveTransmit = 0;
-	// set i2c bit rate to 100KHz
-	i2cSetBitrate(100);
+	// set i2c bit rate to 400KHz
+	i2cSetBitrate(400);
 	// enable TWI (two-wire interface)
 	sbi(TWCR, TWEN);
 	// set state
@@ -301,68 +301,6 @@ uint8_t i2cMasterReceiveNI(uint8_t deviceAddr, uint8_t length, uint8_t *data)
 
 	return retval;
 }
-/*
-void i2cMasterTransferNI(uint8_t deviceAddr, uint8_t sendlength, uint8_t* senddata, uint8_t receivelength, uint8_t* receivedata)
-{
-	// disable TWI interrupt
-	cbi(TWCR, TWIE);
-
-	// send start condition
-	i2cSendStart();
-	i2cWaitForComplete();
-
-	// if there's data to be sent, do it
-	if(sendlength)
-	{
-		// send device address with write
-		i2cSendByte( deviceAddr & 0xFE );
-		i2cWaitForComplete();
-		
-		// send data
-		while(sendlength)
-		{
-			i2cSendByte( *senddata++ );
-			i2cWaitForComplete();
-			sendlength--;
-		}
-	}
-
-	// if there's data to be received, do it
-	if(receivelength)
-	{
-		// send repeated start condition
-		i2cSendStart();
-		i2cWaitForComplete();
-
-		// send device address with read
-		i2cSendByte( deviceAddr | 0x01 );
-		i2cWaitForComplete();
-
-		// accept receive data and ack it
-		while(receivelength > 1)
-		{
-			i2cReceiveByte(TRUE);
-			i2cWaitForComplete();
-			*receivedata++ = i2cGetReceivedByte();
-			// decrement length
-			receivelength--;
-		}
-
-		// accept receive data and nack it (last-byte signal)
-		i2cReceiveByte(TRUE);
-		i2cWaitForComplete();
-		*receivedata++ = i2cGetReceivedByte();
-	}
-	
-	// transmit stop condition
-	// leave with TWEA on for slave receiving
-	i2cSendStop();
-	while( !(inb(TWCR) & BV(TWSTO)) );
-
-	// enable TWI interrupt
-	sbi(TWCR, TWIE);
-}
-*/
 
 //! I2C (TWI) interrupt service routine
 ISR(TWI_vect)

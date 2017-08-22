@@ -27,17 +27,6 @@
 #define MEM_START 0x0007
 #define MEMORY_SIZE 0x2000
 
-
-/*
-#include <Arduino.h>
-//#include <Adafruit_TCS34725.h>
-//#include <Adafruit_TSL2591Soft.h>
-#include <MCP79412RTC.h>
-#include <minne.h>
-#include <TwiDev.h>
-#include <Adafruit_Sensor.h>
-//#include <SoftI2CMaster.h>
-*/
 #include <avr/power.h>
 #include <avr/wdt.h>
 #include <avr/sleep.h>
@@ -53,6 +42,7 @@
 #include "i2c.h"
 
 #include "24lc512.h"
+#include "mcp7940n.h"
 //#include "i2c.h"
 //#include "i2c_master.h"
 
@@ -251,23 +241,33 @@ int main(void)
 	char hei[16] = "Christian";
 	uint8_t hade = 0x0;
 	while(1){
-		uint16_t eeprom_ptr = 7;
+		uint8_t set_datetime[12] = {1,2,3,4,5,6,2,0,0,8,1,7};
+		mcp7940n_set_time(set_datetime);
+		_delay_ms(1);
 		
-		uint8_t data[4] = {0x4, 0x98, 0x69, 0x42};
-		//mcp24lc512_write(&eeprom_ptr,data,4);
-		_delay_ms(32);
-		uint8_t indata[4] = { 0 };
-		//mcp24lc512_read(&eeprom_ptr,indata,4);
-		char txt[8];
+		uint8_t get_datetime[12] = { 1 };
+		mcp7940n_get_time(get_datetime);
+		_delay_ms(1);
+		uint16_t wr_ptr = 0x0;
 		
-		for(int i = 0; i < 4; i++){
-			itoa(indata[i],txt,16);
-			strcat(&txt,'\r\n');
+		uint8_t get_datetime_eeprom[12] = { 2 };
+			
+		uart_puts("Got time: ");
+		uint16_t rptr = 0x0;
+		//uint8_t testbuff[8] = {0x19, 0x22, 0xde,0xad,0xbe,0xef};
+		
+		uint8_t testbuff2[32] = { 0 };
+		mcp24lc512_write(0x1192,set_datetime,12);
+		mcp24lc512_read(0x1192, get_datetime,12);
+		
+		char txt[8] = "111";
+		for(int i = 0; i < 12; i++){
+			itoa(get_datetime[i],txt,16);
 			uart_puts(txt);
-		} 
-
-		uart_puts("RUNNING\r\n");
-
+		}
+		
+		
+		
 	};
 	
 }

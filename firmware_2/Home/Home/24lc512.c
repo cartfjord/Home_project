@@ -14,7 +14,9 @@ void mcp24lc512_write(const uint16_t eeprom_ptr,const uint8_t *data, const uint8
 	for(uint8_t i = 0; i < len; i++) transmit_buff[i+2] = data[i]; //Copy data to transmit buffer.
 	i2cMasterSend((MCP24LC512_I2C_ADDR << 1) | I2C_WRITE, len +sizeof(eeprom_ptr), transmit_buff);
 	
-	_delay_ms(5); //Need a 5 ms pause here before initiating an eeprom read command!
+	_delay_ms(5); 
+	//A page write takes a maximum of 5 ms according to the datasheet.
+	//Could possibly do something else while writing. 
 }
 
 void mcp24lc512_read(const uint16_t eeprom_ptr, uint8_t *data, const uint8_t len){

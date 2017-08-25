@@ -50,6 +50,9 @@
 //#include "tcs.h"
 //#include <I2C_eeprom.h>
 
+volatile uint8_t SAMPLE_INTERVAL = 1;
+
+
 void start_timer(void);
 void stop_timer(void);
 void deep_sleep(void);
@@ -58,6 +61,7 @@ void deep_sleep(void);
 void uart_wait_tx_complete(void){
 	while(UCSR0B & (1 << UDRIE0)) {};
 	_delay_ms(10);
+	
 }
 
 void execute_command(char command){
@@ -77,6 +81,19 @@ void execute_command(char command){
 
 		case SYNC_TIME:
 		if(DEBUG) uart_puts("SYNC_TIME\n");
+		uint8_t set_datetime[12] = {1,2,3,4,5,6,2,0,0,8,1,7};
+		mcp7940n_set_time(set_datetime);
+		uint8_t get_datetime[12] = { 0 };
+	
+		mcp24lc512_write(0x1092,set_datetime,12);
+		mcp24lc512_read(0x1092, get_datetime,12);
+		
+		char txt[8] = "111";
+		for(int i = 0; i < 12; i++){
+			itoa(get_datetime[i],txt,16);
+			uart_puts(txt);
+		}
+			
 		//serial_clear_buffer();
 		//sleep();
 		//_delay_ms(32);
@@ -160,13 +177,22 @@ ISR(INT1_vect){
 	start_timer();	
 	EIMSK |= (1 << INT1); //Re-enable interrupt from uart. 
 }
+uint8_t RTC_ISR = 0;
 ISR(INT0_vect){
+	//RTC_ISR = 1;
+	//while(1){
+	//	PORTD ^= (1 << PIND5);
+	//}
 	uart_puts("INT0");
-	uint8_t uart_status = uart_peek() >> 8;
+	//mcp7940n_interrupt_flag_clear();
+	/*uint8_t uart_status = uart_peek() >> 8;
 	if(!uart_status){
 		char command = uart0_getc() & 0xFF;
 		execute_command(command);
 	}
+	*/
+	
+	
 }
 
 ISR(TIMER0_OVF_vect){
@@ -179,17 +205,16 @@ ISR(TIMER0_OVF_vect){
 
 
 void pin_config(void){
-	DDRD  &= ~((1 << DDD2) | (1 << DDD3)); //Input
-	PORTD |=  (1 << PORTD2) | (1 << PORTD3); //D3 has external 10k pull up.
+	DDRD = (1 << DDD2) | (1 << DDD3); //Input for INT0 and INT1
+	PORTD = /*(1 << PORTD2) |*/ (1 << PORTD3); //Pull-up for INT0 and INT1.
+	//Should not be necessary with pull-up on INT0 (PORTD2). Got external pull-up.
 }
 
-void interrupt_config(void){
-	
-	EICRA |= (1 << ISC10); //Interrupt on falling edge from RTC.
-	EICRA |= (1 << ISC11); //Interrupt on falling edge at RX from Computer.
+void interrupt_config(void){	
+	EICRA = (1 << ISC10) | (1 << ISC11); ; //Interrupt on falling edge from RTC and PC.
 	
 	EIMSK |= (1 << INT1);
-	EIMSK |= (1 << INT0); //Enable interrupts.
+	//EIMSK |= (1 << INT0); //Enable interrupts.
 	
 	//I bit in SREG must be enabled manually by calling sei();
 }
@@ -234,15 +259,24 @@ int main(void)
 	i2cInit();
 	
 
-	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-	sei();
-	deep_sleep();
+
 	uint16_t reg_cnt = 0;
 	char hei[16] = "Christian";
 	uint8_t hade = 0x0;
-	while(1){
-		uint8_t set_datetime[12] = {1,2,3,4,5,6,2,0,0,8,1,7};
-		mcp7940n_set_time(set_datetime);
+	uint8_t set_datetime[12] = {1,9,5,9,5,0,2,2,0,8,1,7};
+	uart_puts("Hello World!");
+	mcp7940n_set_time(set_datetime);
+	
+	//mcp7940n_interrupt_interval_set(0,1);
+	//mcp7940n_alarm_minutes_increment(1);
+	mcp7940n_interrupt_enable();
+	mcp7940n_osc_enable();
+	mcp7940n_interrupt_flag_clear();
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+	sei();
+	deep_sleep();
+	while(1){		
+
 		_delay_ms(1);
 		
 		uint8_t get_datetime[12] = { 1 };
@@ -257,15 +291,64 @@ int main(void)
 		//uint8_t testbuff[8] = {0x19, 0x22, 0xde,0xad,0xbe,0xef};
 		
 		uint8_t testbuff2[32] = { 0 };
-		mcp24lc512_write(0x1192,set_datetime,12);
-		mcp24lc512_read(0x1192, get_datetime,12);
+		//mcp24lc512_write(0x1192,set_datetime,12);
+		//mcp24lc512_read(0x1192, get_datetime,12);
 		
 		char txt[8] = "111";
 		for(int i = 0; i < 12; i++){
 			itoa(get_datetime[i],txt,16);
 			uart_puts(txt);
 		}
+		uart_putc('\r');
+		uart_putc('\n');
+		uint8_t reg_value = 0xFF;
+		uint8_t reg_addr = MCP7940N_REG_CONTROL;
+		i2cMasterSend((MCP7940N_I2C_ADDR << 1) | I2C_WRITE, 1, &reg_addr);
+		i2cMasterReceive((MCP7940N_I2C_ADDR << 1) | I2C_READ, 1, &reg_value);
 		
+		itoa(reg_value,txt,16);
+		uart_puts(txt);
+		uart_putc('\r');
+		uart_putc('\n');
+		
+		reg_value = 0xFF;
+		reg_addr = MCP7940N_REG_ALM0MIN;
+		
+		i2cMasterSend((MCP7940N_I2C_ADDR << 1) | I2C_WRITE, 1, &reg_addr);
+		i2cMasterReceive((MCP7940N_I2C_ADDR << 1) | I2C_READ, 1, &reg_value);
+		uart_puts("ALARM value\t0b");
+		//char txt[8];
+		itoa(reg_value,txt,2);
+		uart_puts(txt);
+		uart_putc('\r');
+		uart_putc('\n');
+		
+		reg_value = 0xFF;
+		reg_addr = MCP7940N_REG_CONTROL;
+				
+		i2cMasterSend((MCP7940N_I2C_ADDR << 1) | I2C_WRITE, 1, &reg_addr);
+		i2cMasterReceive((MCP7940N_I2C_ADDR << 1) | I2C_READ, 1, &reg_value);
+		uart_puts("CONTROL value\t0b");
+		//char txt[8];
+		itoa(reg_value,txt,2);
+		uart_puts(txt);
+		uart_putc('\r');
+		uart_putc('\n');
+		
+		reg_value = 0xFF;
+		reg_addr = MCP7940N_REG_ALM0WKDAY;
+				
+		i2cMasterSend((MCP7940N_I2C_ADDR << 1) | I2C_WRITE, 1, &reg_addr);
+		i2cMasterReceive((MCP7940N_I2C_ADDR << 1) | I2C_READ, 1, &reg_value);
+		uart_puts("ALM0WKDAY value\t0b");
+		//char txt[8];
+		itoa(reg_value,txt,2);
+		uart_puts(txt);
+		uart_putc('\r');
+		uart_putc('\n');
+		
+		mcp7940n_interrupt_flag_clear();
+		for(int i = 0; i < 30; i++) _delay_ms(32);
 		
 		
 	};

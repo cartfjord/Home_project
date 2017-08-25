@@ -46,7 +46,7 @@ enum {
 void tsl2591_enable(void);
 void tsl2591_sleep(void);
 void tsl2591_set_gain(const uint8_t *gain);
-void tsl2591_set_time(const uint8_t *time);
+void tsl2591_set_integration_time(const uint8_t *time);
 
 void tsl2591_read_sensor(uint16_t *c0, uint16_t *c1);
 void tsl2591_get_id(uint8_t *id);

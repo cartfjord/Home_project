@@ -44,13 +44,19 @@ enum {
 void mcp7940n_set_time(uint8_t *timedate_string);
 void mcp7940n_get_time(uint8_t *timedate_string);
 
+void mcp7940n_alarm_minutes_set(uint8_t min_ten, uint8_t min_one);
+//void mcp7940_alarm_seconds_set(uint8_t sec_ten, uint8_t sec_one); TODO
+
+void mcp7940n_alarm_minutes_increment(uint8_t minutes);
+
+
 void mcp7940n_interrupt_flag_clear();
 void mcp7940n_interrupt_enable();
 void mcp7940n_interrupt_disable();
-void mcp7940n_set_interrupt_intervalu(int8_t min_ten, uint8_t min_one);
+void mcp7940n_interrupt_interval_set(uint8_t min_ten, uint8_t min_one);
 
 void mcp7940n_osc_enable(void);
-void mcp7940n_osc_trim(int8_t trimval);
+//void mcp7940n_osc_trim(int8_t trimval); TODO
 
 #endif //MCP7950N_H
 	

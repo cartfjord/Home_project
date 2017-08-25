@@ -21,7 +21,7 @@ void tsl2591_set_gain(const uint8_t *gain){
 	i2c_stop();
 }
 
-void tsl2591_set_time(const uint8_t *time){
+void tsl2591_set_integration_time(const uint8_t *time){
 	i2c_start(I2C_WRITE | TSL2591_I2C_ADDR);
 	i2c_write(TSL2591_NORMAL_OPERATION | TSL2591_REG_CONFIG);
 	i2c_write(*time);
